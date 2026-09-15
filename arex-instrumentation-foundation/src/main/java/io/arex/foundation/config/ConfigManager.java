@@ -588,7 +588,7 @@ public class ConfigManager {
     }
 
     public void setAgentEnabled(boolean agentEnabled) {
-        this.agentEnabled = agentEnabled;
+         this.agentEnabled = agentEnabled;
     }
 
     public String getMessage() {

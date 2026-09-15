@@ -123,6 +123,14 @@ public class DubboAdapter extends AbstractAdapter {
         }
     }
 
+
+    @Override
+    public Map<String, String> getRequestHeaders() {
+        Map<String, String> requestHeaders = super.getRequestHeaders();
+        requestHeaders.put("dubboPath", getUrl().getPath());
+        return requestHeaders;
+    }
+
     public String getProtocol() {
         return getUrl().getProtocol();
     }
