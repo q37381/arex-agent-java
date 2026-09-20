@@ -70,6 +70,16 @@ public class ServletExtractor<HttpServletRequest, HttpServletResponse> {
         }
 
         setResponseHeader();
+
+        // If a nested Dubbo provider took over the entry-point recording,
+        // skip Servlet mocker recording but still clean up the context.
+        ArexContext currentCtx = ContextManager.currentContext();
+        if (currentCtx != null && currentCtx.getAttachment(ArexConstants.DUBBO_PROVIDER_ENTRY) != null) {
+            CaseEventDispatcher.onEvent(CaseEvent.ofExitEvent());
+            adapter.copyBodyToResponse(httpServletResponse);
+            return;
+        }
+
         doExecute();
         CaseEventDispatcher.onEvent(CaseEvent.ofExitEvent());
         adapter.removeAttribute(httpServletRequest, ServletAdviceHelper.SERVLET_ASYNC_FLAG);

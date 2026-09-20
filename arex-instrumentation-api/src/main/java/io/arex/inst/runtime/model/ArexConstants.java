@@ -52,6 +52,12 @@ public class ArexConstants {
     public static final String CONFIG_VERSION = "configBatchNo";
     public static final String SKIP_FLAG = "arex-skip-flag";
     public static final String ORIGINAL_REQUEST = "arex-original-request";
+    /**
+     * Attachment key set on the context when a Dubbo provider layer takes over as the authoritative
+     * entry point (e.g. WebService custom protocol nested inside Servlet). The outer Servlet layer
+     * checks this marker on exit to avoid recording a duplicate entry mocker.
+     */
+    public static final String DUBBO_PROVIDER_ENTRY = "arex-dubbo-provider-entry";
     public static final String MERGE_RECORD_NAME = "arex.mergeRecord";
     public static final String MERGE_RECORD_THRESHOLD = "arex.merge.record.threshold";
     public static final String DISABLE_MERGE_RECORD = "arex.disable.merge.record";

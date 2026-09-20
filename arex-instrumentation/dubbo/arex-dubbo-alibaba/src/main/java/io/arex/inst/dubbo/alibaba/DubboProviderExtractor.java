@@ -19,7 +19,18 @@ import java.util.Map;
 import static io.arex.inst.dubbo.common.DubboConstants.KEY_HEADERS;
 
 public class DubboProviderExtractor extends DubboExtractor {
+
     public static void onServiceEnter(Invoker<?> invoker, Invocation invocation) {
+        // If an outer layer (e.g. Servlet in WebService-based custom Dubbo protocol) already
+        // created a context, propagate replay IDs to this invocation's attachments so the
+        // Dubbo provider takes over as the authoritative entry point (DUBBO_PROVIDER category).
+        // The subsequent ofEnterEvent() will destroy the outer context, and ofCreateEvent()
+        // will create a new one with the propagated IDs.
+        if (ContextManager.needRecordOrReplay()) {
+            ContextManager.setAttachment(ArexConstants.DUBBO_PROVIDER_ENTRY, Boolean.TRUE);
+            return;
+        }
+
         CaseEventDispatcher.onEvent(CaseEvent.ofEnterEvent());
         DubboAdapter adapter = DubboAdapter.of(invoker, invocation);
         if (shouldSkip(adapter)) {
@@ -31,7 +42,7 @@ public class DubboProviderExtractor extends DubboExtractor {
         CaseEventDispatcher.onEvent(CaseEvent.ofCreateEvent(EventSource.of(caseId, excludeMockTemplate)));
         addAttachmentsToContext(adapter);
         RequestHandlerManager.handleAfterCreateContext(invocation.getAttachments(), MockCategoryType.DUBBO_PROVIDER.getName());
-        invocation.getAttachments().put(ArexConstants.ORIGINAL_REQUEST, Serializer.serialize(invocation.getArguments()));
+        invocation.getAttachments().put(ArexConstants.ORIGINAL_REQUEST, adapter.getRequest());
     }
     public static void onServiceExit(Invoker<?> invoker, Invocation invocation, Result result) {
         if (!ContextManager.needRecordOrReplay()) {
@@ -42,7 +53,11 @@ public class DubboProviderExtractor extends DubboExtractor {
         RequestHandlerManager.postHandle(invocation.getAttachments(), result != null ? result.getAttachments() : null,
                 MockCategoryType.DUBBO_PROVIDER.getName());
         adapter.execute(result, makeMocker(adapter));
-        CaseEventDispatcher.onEvent(CaseEvent.ofExitEvent());
+        // If nested inside Servlet (DUBBO_PROVIDER_ENTRY set), don't remove context - let Servlet EXIT handle cleanup
+        if (ContextManager.currentContext() == null
+                || ContextManager.currentContext().getAttachment(ArexConstants.DUBBO_PROVIDER_ENTRY) == null) {
+            CaseEventDispatcher.onEvent(CaseEvent.ofExitEvent());
+        }
         invocation.getAttachments().remove(ArexConstants.ORIGINAL_REQUEST);
     }
     private static Mocker makeMocker(DubboAdapter adapter) {

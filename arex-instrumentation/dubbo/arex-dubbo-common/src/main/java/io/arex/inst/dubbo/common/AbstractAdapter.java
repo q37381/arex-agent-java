@@ -110,7 +110,7 @@ public abstract class AbstractAdapter {
     }
 
     protected String serializeArguments(Object[] arguments, String serializer) {
-        if (StringUtil.isEmpty(excludeMapKeysConfig)) {
+        if (StringUtil.isEmpty(Config.get().getString(DubboConstants.EXCLUDE_MAP_KEYS_CONFIG))) {
             String result = Serializer.serialize(arguments, serializer);
             if (result != null || ArrayUtils.isEmpty(arguments)) {
                 return result;
@@ -132,16 +132,14 @@ public abstract class AbstractAdapter {
         }
         // when the exclude config is present, containers are always rebuilt
         // so that the configured keys can be dropped at any depth
-        if (StringUtil.isNotEmpty(excludeMapKeysConfig)) {
-            if (value instanceof Map) {
-                return filterMap((Map<?, ?>) value);
-            }
-            if (value instanceof Collection) {
-                return filterCollection((Collection<?>) value);
-            }
-            if (isObjectArray(value)) {
-                return filterArray(value);
-            }
+        if (value instanceof Map) {
+            return filterMap((Map<?, ?>) value);
+        }
+        if (value instanceof Collection) {
+            return filterCollection((Collection<?>) value);
+        }
+        if (isObjectArray(value)) {
+            return filterArray(value);
         }
         return value;
     }
@@ -206,11 +204,7 @@ public abstract class AbstractAdapter {
      * parse the exclude map keys config, cached until the config value changes
      */
     private void reloadExcludeMapKeysIfModified() {
-        Config config = Config.get();
-        if (config == null) {
-            return;
-        }
-        String configValue = config.getString(DubboConstants.EXCLUDE_MAP_KEYS_CONFIG);
+        String configValue = Config.get().getString(DubboConstants.EXCLUDE_MAP_KEYS_CONFIG);
         if (configValue == null) {
             // fallback: JVM arg / config file, then hardcoded default
             configValue = System.getProperty(DubboConstants.EXCLUDE_MAP_KEYS_CONFIG,

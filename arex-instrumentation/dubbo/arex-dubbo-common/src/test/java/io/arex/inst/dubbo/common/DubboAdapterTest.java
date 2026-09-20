@@ -69,6 +69,12 @@ public class DubboAdapterTest extends AbstractAdapter {
     public String getOperationName() {
         return "testOperationName";
     }
+
+    @Override
+    protected String getMethodName() {
+        return "$invoke";
+    }
+
     public String getServiceOperation() {
         return serviceOperation;
     }

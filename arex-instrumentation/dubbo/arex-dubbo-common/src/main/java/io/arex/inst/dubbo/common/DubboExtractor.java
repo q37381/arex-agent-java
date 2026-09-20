@@ -3,9 +3,11 @@ package io.arex.inst.dubbo.common;
 import io.arex.agent.bootstrap.model.Mocker;
 import io.arex.agent.bootstrap.util.StringUtil;
 import io.arex.inst.runtime.config.Config;
+import io.arex.inst.runtime.context.ArexContext;
 import io.arex.inst.runtime.context.ContextManager;
 import io.arex.inst.runtime.listener.EventProcessor;
 import io.arex.inst.runtime.model.ArexConstants;
+import io.arex.inst.runtime.serializer.Serializer;
 import io.arex.inst.runtime.util.IgnoreUtils;
 
 import java.util.*;
@@ -61,5 +63,39 @@ public class DubboExtractor {
     protected static void addAttachmentsToContext(AbstractAdapter adapter) {
         ContextManager.setAttachment(ArexConstants.FORCE_RECORD, adapter.forceRecord());
         ContextManager.setAttachment(ArexConstants.SCHEDULE_REPLAY, adapter.getAttachment(ArexConstants.SCHEDULE_REPLAY));
+    }
+
+    /**
+     * When an outer instrumentation layer (e.g. Servlet in WebService-based custom Dubbo protocols)
+     * already created a context, propagate replay-related IDs to the Dubbo invocation attachments
+     * so the Dubbo provider can take over as the authoritative entry point with DUBBO_PROVIDER category.
+     *
+     * @param attachmentSetter version-specific way to put a key-value pair into invocation attachments
+     * @return true if an outer context was detected and handled (caller should still proceed with normal flow)
+     */
+    protected static boolean propagateFromOuterContext(BiConsumer<String, String> attachmentSetter) {
+        if (!ContextManager.needRecordOrReplay()) {
+            return false;
+        }
+        ArexContext outerContext = ContextManager.currentContext();
+        if (outerContext == null) {
+            return false;
+        }
+        // Only propagate for replay scenario - the record ID tells Dubbo layer this is a replay
+        if (outerContext.isReplay()) {
+            attachmentSetter.accept(ArexConstants.RECORD_ID, outerContext.getCaseId());
+            // Propagate schedule replay flag
+            Object scheduleReplay = outerContext.getAttachment(ArexConstants.SCHEDULE_REPLAY);
+            if (scheduleReplay != null) {
+                attachmentSetter.accept(ArexConstants.SCHEDULE_REPLAY, String.valueOf(scheduleReplay));
+            }
+            // Propagate exclude mock template
+            Map<String, Set<String>> excludeMock = outerContext.getExcludeMockTemplate();
+            if (excludeMock != null && !excludeMock.isEmpty()) {
+                attachmentSetter.accept(ArexConstants.HEADER_EXCLUDE_MOCK, Serializer.serialize(excludeMock));
+            }
+        }
+        // For recording scenario: no propagation needed, Dubbo creates a fresh recording context
+        return true;
     }
 }
