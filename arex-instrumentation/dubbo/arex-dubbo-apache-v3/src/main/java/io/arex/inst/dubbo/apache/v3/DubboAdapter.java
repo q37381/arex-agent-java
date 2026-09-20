@@ -33,6 +33,11 @@ public class DubboAdapter extends AbstractAdapter {
     }
 
     @Override
+    protected String getMethodName() {
+        return invocation.getMethodName();
+    }
+
+    @Override
     public String getServiceName() {
         return invocation.getTargetServiceUniqueName();
     }

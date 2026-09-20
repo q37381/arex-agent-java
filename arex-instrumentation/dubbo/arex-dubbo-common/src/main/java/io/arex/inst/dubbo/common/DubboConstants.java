@@ -6,4 +6,7 @@ public class DubboConstants {
     public static final String KEY_GROUP = "group";
     public static final String KEY_VERSION = "version";
     public static final String KEY_GENERIC = "generic";
+
+    public static final String EXCLUDE_MAP_KEYS_CONFIG = "arex.dubbo.exclude.map.keys";
+
 }
